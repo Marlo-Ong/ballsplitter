@@ -110,6 +110,8 @@ public class BallPool : MonoBehaviour
     /// </summary>
     private IEnumerator ResetSimulation()
     {   
+        yield return new WaitForSeconds(1);
+
         while (AlivePool.Count > 0)
         {
             SetBallDead(AlivePool[0]);
@@ -129,11 +131,9 @@ public class BallPool : MonoBehaviour
             }
         }
         DeadPool.RemoveAt(DeadPool.Count - 1);
+        GetBall();
         
         OnResetSimulation?.Invoke(gameObject, gameObject);
-        yield return new WaitForSeconds(1);
-        GetBall();
-
         _resetCoroutine = null;
     }
 
