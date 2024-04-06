@@ -21,15 +21,15 @@ public class BallPool : MonoBehaviour
     [field: Range(0.0f, 1.0f)][field: SerializeField] private float _startingSplitChance;
     public float GlobalSplitChance;
     public bool IsBallToBallCollisionOn;
-    private List<GameObject> AlivePool;
-    private List<GameObject> DeadPool;
+    private List<GameObject> ActivePool;
+    private List<GameObject> InactivePool;
     public int ActiveBallCount
     {
-        get => AlivePool.Count;
+        get => ActivePool.Count;
     }
     public int InactiveBallCount
     {
-        get => DeadPool.Count;
+        get => InactivePool.Count;
     }
 
     private Coroutine _resetCoroutine;
@@ -38,8 +38,6 @@ public class BallPool : MonoBehaviour
     # region Instantiation Methods
     void Awake()
     {
-        AlivePool = new();
-        DeadPool = new();
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -49,11 +47,13 @@ public class BallPool : MonoBehaviour
     
     void Start()
     {
+        ActivePool = new();
+        InactivePool = new();
         GlobalSplitChance = _startingSplitChance;
 
         for(int i = 0; i < _startingBallAmount; i++)
         {
-            SetBallDead(MakeNewBall());
+            SetBallInactive(MakeNewBall());
         }
 
         _resetCoroutine ??= StartCoroutine(ResetSimulation());
@@ -63,27 +63,24 @@ public class BallPool : MonoBehaviour
 
     # region Event Handlers
 
-    void Split_OnSplit(object sender, GameObject ball)
+    void Ball_OnSplit(object sender, GameObject ball)
     {
-        GetBall();
+        PlayActiveBall();
         OnGlobalSplit?.Invoke(null, gameObject);
     }
 
-    void Split_OnSplitFail(object sender, GameObject ball)
+    void Ball_OnSplitFail(object sender, GameObject ball)
     {
-        SetBallDead(ball);
+        SetBallInactive(ball);
         OnGlobalSplitFail?.Invoke(null, gameObject);
 
-        if (AlivePool.Count <= 0)
+        if (ActivePool.Count <= 0)
         {
             _resetCoroutine ??= StartCoroutine(ResetSimulation());
         }
     }
 
-    /// <remarks>
-    /// Called by OnSliderValueChanged UnityEvent
-    /// </remarks>
-    public void UpdateGlobalSplitChance(float newChance)
+    public void UnityEvent_OnSliderValueChanged_SplitChance(float newChance)
     {
         GlobalSplitChance = newChance;
         if (_resetCoroutine != null)
@@ -93,7 +90,7 @@ public class BallPool : MonoBehaviour
         _resetCoroutine = StartCoroutine(ResetSimulation());
     }
 
-    public void ToggleBallToBallCollision(bool collide)
+    public void UnityEvent_OnValueChanged_BallCollisionToggle(bool collide)
     {
         IsBallToBallCollisionOn = collide;
         if (_resetCoroutine != null)
@@ -106,19 +103,28 @@ public class BallPool : MonoBehaviour
     # endregion
 
     /// <summary>
-    /// Kills all active balls, resets them to global parameters, and reactivates one.
+    /// Kills all active balls, resets them with global parameters, and reactivates one to restart sim.
     /// </summary>
     private IEnumerator ResetSimulation()
     {   
         yield return new WaitForSeconds(1);
 
-        while (AlivePool.Count > 0)
+        while (ActivePool.Count > 0)
         {
-            SetBallDead(AlivePool[0]);
+            SetBallInactive(ActivePool[0]);
         }
 
-        DeadPool.Add(_ballPrefab);
-        foreach(GameObject ball in DeadPool)
+        ResetAllBallParams();
+        PlayActiveBall();
+
+        OnResetSimulation?.Invoke(gameObject, gameObject);
+        _resetCoroutine = null;
+    }
+
+    private void ResetAllBallParams()
+    {
+        InactivePool.Add(_ballPrefab);
+        foreach(GameObject ball in InactivePool)
         {
             ball.GetComponent<Ball>().SplitChance = GlobalSplitChance;
             if (IsBallToBallCollisionOn)
@@ -130,57 +136,53 @@ public class BallPool : MonoBehaviour
                 ball.GetComponent<Collider2D>().excludeLayers = LayerMask.GetMask("Balls");
             }
         }
-        DeadPool.RemoveAt(DeadPool.Count - 1);
-        GetBall();
-        
-        OnResetSimulation?.Invoke(gameObject, gameObject);
-        _resetCoroutine = null;
+        InactivePool.RemoveAt(InactivePool.Count - 1);
     }
 
     /// <remarks>
-    /// No need to unsubscribe since ball objects aren't being destroyed
+    /// Currently no need to unsubscribe event handlers since ball objects aren't being destroyed
     /// </remarks>
     private GameObject MakeNewBall()
     {
         GameObject ball = Instantiate(_ballPrefab);
-        ball.GetComponent<Ball>().OnSplit += Split_OnSplit;
-        ball.GetComponent<Ball>().OnSplitFail += Split_OnSplitFail;
+        ball.GetComponent<Ball>().OnSplit += Ball_OnSplit;
+        ball.GetComponent<Ball>().OnSplitFail += Ball_OnSplitFail;
         return ball;
     }
 
-    private GameObject SetBallAlive(GameObject ball)
+    private GameObject SetBallActive(GameObject ball)
     {
-        ball.transform.position = (Vector2)_ballPrefab.transform.position + new Vector2(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
+        ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
         ball.SetActive(true);
-        AlivePool.Add(ball);
-        DeadPool.Remove(ball);
+        ActivePool.Add(ball);
+        InactivePool.Remove(ball);
 
         return ball;
     }
 
-    private GameObject SetBallDead(GameObject ball)
+    private GameObject SetBallInactive(GameObject ball)
     {
         ball.SetActive(false);
-        DeadPool.Add(ball);
-        AlivePool.Remove(ball);
+        InactivePool.Add(ball);
+        ActivePool.Remove(ball);
 
         return ball;
     }
 
     /// <summary>
-    ///  Returns an alive ball if available; returns null if over ball limit.
+    ///  Activates an available inactive ball or creates new one. Returns null if making new ball would overtake ball limit.
     /// </summary>
-    public GameObject GetBall()
+    public GameObject PlayActiveBall()
     {
-        if (DeadPool.Count > 0)
+        if (InactiveBallCount > 0)
         {
-            return SetBallAlive(DeadPool[0]);
+            return SetBallActive(InactivePool[0]);
         }
 
-        else if (AlivePool.Count < _ballAmountLimit)
+        else if (ActiveBallCount < _ballAmountLimit)
         {
             GameObject newBall = MakeNewBall();
-            SetBallAlive(newBall);
+            SetBallActive(newBall);
             return newBall;
         }
 
