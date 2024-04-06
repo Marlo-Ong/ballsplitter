@@ -20,6 +20,7 @@ public class BallPool : MonoBehaviour
     [field: SerializeField] private int _ballAmountLimit;
     [field: Range(0.0f, 1.0f)][field: SerializeField] private float _startingSplitChance;
     public float GlobalSplitChance;
+    public bool IsBallToBallCollisionOn;
     private List<GameObject> AlivePool;
     private List<GameObject> DeadPool;
     public int ActiveBallCount
@@ -30,12 +31,15 @@ public class BallPool : MonoBehaviour
     {
         get => DeadPool.Count;
     }
+
     private Coroutine _resetCoroutine;
 
 
     # region Instantiation Methods
     void Awake()
     {
+        AlivePool = new();
+        DeadPool = new();
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -89,6 +93,16 @@ public class BallPool : MonoBehaviour
         _resetCoroutine = StartCoroutine(ResetSimulation());
     }
 
+    public void ToggleBallToBallCollision(bool collide)
+    {
+        IsBallToBallCollisionOn = collide;
+        if (_resetCoroutine != null)
+        {
+            StopCoroutine(_resetCoroutine);
+        }
+        _resetCoroutine = StartCoroutine(ResetSimulation());
+    }
+
     # endregion
 
     /// <summary>
@@ -101,10 +115,20 @@ public class BallPool : MonoBehaviour
             SetBallDead(AlivePool[0]);
         }
 
+        DeadPool.Add(_ballPrefab);
         foreach(GameObject ball in DeadPool)
         {
             ball.GetComponent<Ball>().SplitChance = GlobalSplitChance;
+            if (IsBallToBallCollisionOn)
+            {
+                ball.GetComponent<Collider2D>().excludeLayers = LayerMask.GetMask("Nothing");
+            }
+            else
+            {
+                ball.GetComponent<Collider2D>().excludeLayers = LayerMask.GetMask("Balls");
+            }
         }
+        DeadPool.RemoveAt(DeadPool.Count - 1);
         
         OnResetSimulation?.Invoke(gameObject, gameObject);
         yield return new WaitForSeconds(1);

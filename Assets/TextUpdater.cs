@@ -47,9 +47,20 @@ public class TextUpdater : MonoBehaviour
         UpdateStatsText();
     }
 
-    public void UpdateSplitChanceText(float chance)
+    public void UnityEvent_OnUpdateSplitChance(float chance)
     {
         splitChanceText.text = $"Split Chance: {chance:P0}";
+        ResetHighestStats();
+        
+    }
+
+    public void UnityEvent_OnToggleBallCollision(bool _)
+    {
+        ResetHighestStats();
+    }
+
+    private void ResetHighestStats()
+    {
         highestSplits = 0;
         highestSplitFails = 0;
         UpdateStatsText();

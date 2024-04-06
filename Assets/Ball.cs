@@ -23,6 +23,8 @@ public class Ball : MonoBehaviour
         }
     }
 
+    void OnCollisionStay2D(Collision2D collision) => OnCollisionEnter2D(collision);
+
     /// <summary>
     /// Returns if ball should split based on correct probabilities from PRNG
     /// </summary>
