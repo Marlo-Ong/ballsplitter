@@ -6,15 +6,13 @@ using UnityEngine;
 
 public class TextUpdater : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI totalSplitsText;
-    [SerializeField] private TextMeshProUGUI totalSplitFailsText;
-    [SerializeField] private TextMeshProUGUI highestSplitsText;
-    [SerializeField] private TextMeshProUGUI highestSplitFailsText;
+    [SerializeField] private TextMeshProUGUI statsText;
     [SerializeField] private TextMeshProUGUI splitChanceText;
-    public float totalSplits;
-    public float totalSplitFails;
-    public float highestSplits;
-    public float highestSplitFails;
+    private int totalSplits;
+    private int totalSplitFails;
+    private int highestSplits;
+    private int highestSplitFails;
+    private float accuracy;
     void Start()
     {
         BallPool.OnResetSimulation += BallPool_OnResetSimulation;
@@ -22,36 +20,38 @@ public class TextUpdater : MonoBehaviour
         BallPool.OnGlobalSplitFail += BallPool_OnGlobalSplitFail;
     }
 
+    void UpdateStatsText()
+    {
+        accuracy = (totalSplitFails + totalSplits) == 0 ? 1.0f : (totalSplits / (float)(totalSplitFails + totalSplits));
+        statsText.text = $"Splits: {totalSplits} \nFails: {totalSplitFails} \n\nAccuracy: {accuracy:P} \n\nHighest splits: {highestSplits} \nHighest fails: {highestSplitFails} \n\nActive balls: {BallPool.Instance.ActiveBallCount} \nInactive balls: {BallPool.Instance.InactiveBallCount}";
+    }
+
     void BallPool_OnResetSimulation(object s, GameObject sender)
     {
         totalSplits = 0;
         totalSplitFails = 0;
-        totalSplitsText.text = "Splits: 0";
-        totalSplitFailsText.text = "Fails: 0";
+        UpdateStatsText();
     }
 
     void BallPool_OnGlobalSplit(object s, GameObject sender)
     {
         totalSplits++;
         highestSplits = Mathf.Max(highestSplits, totalSplits);
-        totalSplitsText.text = "Splits: " + totalSplits.ToString();
-        highestSplitsText.text = "Highest splits: " + highestSplits.ToString();
+        UpdateStatsText();
     }
 
     void BallPool_OnGlobalSplitFail(object s, GameObject sender)
     {
         totalSplitFails++;
         highestSplitFails = Mathf.Max(highestSplitFails, totalSplitFails);
-        totalSplitFailsText.text = "Fails: " + totalSplitFails.ToString();
-        highestSplitFailsText.text = "Highest fails: " + highestSplitFails.ToString();
+        UpdateStatsText();
     }
 
     public void UpdateSplitChanceText(float chance)
     {
-        splitChanceText.text = $"Split Chance: {chance:F2}";
+        splitChanceText.text = $"Split Chance: {chance:P0}";
         highestSplits = 0;
         highestSplitFails = 0;
-        highestSplitsText.text = "Highest splits: 0";
-        highestSplitFailsText.text = "Highest fails: 0";
+        UpdateStatsText();
     }
 }

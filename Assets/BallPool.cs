@@ -1,11 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class BallPool : MonoBehaviour
 {
     /// <summary>
-    /// A queue-based object pooling test to optimize instantition/creation of balls,
+    /// A List-based object pooling test to optimize instantition/creation of balls,
     /// where balls "split" with a 50/50 chance (adjustable in inspector).
     /// Could potentially add a ball lifetime to <see cref="Ball"/> for better memory? 
     /// </summary>
@@ -17,10 +18,19 @@ public class BallPool : MonoBehaviour
     [field: SerializeField] private GameObject _ballPrefab;
     [field: SerializeField] private int _startingBallAmount;
     [field: SerializeField] private int _ballAmountLimit;
+    [field: Range(0.0f, 1.0f)][field: SerializeField] private float _startingSplitChance;
     public float GlobalSplitChance;
-    private Queue<GameObject> AlivePool;
-    private Queue<GameObject> DeadPool;
-    private Coroutine _simulationCoroutine;
+    private List<GameObject> AlivePool;
+    private List<GameObject> DeadPool;
+    public int ActiveBallCount
+    {
+        get => AlivePool.Count;
+    }
+    public int InactiveBallCount
+    {
+        get => DeadPool.Count;
+    }
+    private Coroutine _resetCoroutine;
 
 
     # region Instantiation Methods
@@ -35,28 +45,14 @@ public class BallPool : MonoBehaviour
     
     void Start()
     {
-        // Instantiate an object pool with a number of balls to start.
-        AlivePool = new Queue<GameObject>();
-        DeadPool = new Queue<GameObject>();
-        GlobalSplitChance = _ballPrefab.GetComponent<Ball>().SplitChance;
+        GlobalSplitChance = _startingSplitChance;
 
         for(int i = 0; i < _startingBallAmount; i++)
         {
             SetBallDead(MakeNewBall());
         }
 
-        _simulationCoroutine ??= StartCoroutine(ResetSimulation());
-    }
-
-    /// <remarks>
-    /// No need to unsubscribe since ball objects aren't being destroyed
-    /// </remarks>
-    private GameObject MakeNewBall()
-    {
-        GameObject ball = Instantiate(_ballPrefab);
-        ball.GetComponent<Ball>().OnSplit += Split_OnSplit;
-        ball.GetComponent<Ball>().OnSplitFail += Split_OnSplitFail;
-        return ball;
+        _resetCoroutine ??= StartCoroutine(ResetSimulation());
     }
 
     # endregion
@@ -76,45 +72,8 @@ public class BallPool : MonoBehaviour
 
         if (AlivePool.Count <= 0)
         {
-            _simulationCoroutine ??= StartCoroutine(ResetSimulation());
+            _resetCoroutine ??= StartCoroutine(ResetSimulation());
         }
-    }
-
-    # endregion
-
-    private void SetBallAlive(GameObject ball)
-    {
-        ball.transform.position = (Vector2)_ballPrefab.transform.position + new Vector2(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
-        ball.GetComponent<Ball>().SplitChance = GlobalSplitChance;
-        ball.SetActive(true);
-        AlivePool.Enqueue(ball);
-        DeadPool.TryDequeue(out GameObject g);
-    }
-
-    private void SetBallDead(GameObject ball)
-    {
-        ball.SetActive(false);
-        DeadPool.Enqueue(ball);
-        AlivePool.TryDequeue(out GameObject g);
-    }
-
-    private IEnumerator ResetSimulation()
-    {   
-        Time.timeScale = 0.0f;
-        while (AlivePool.Count > 0)
-        {
-            SetBallDead(AlivePool.Peek());
-        }
-        foreach(GameObject ball in DeadPool)
-        {
-            ball.SetActive(false);
-        }
-        Time.timeScale = 1.0f;
-        OnResetSimulation?.Invoke(gameObject, gameObject);
-        yield return new WaitForSeconds(2);
-        GetBall();
-
-        _simulationCoroutine = null;
     }
 
     /// <remarks>
@@ -123,7 +82,65 @@ public class BallPool : MonoBehaviour
     public void UpdateGlobalSplitChance(float newChance)
     {
         GlobalSplitChance = newChance;
-        _simulationCoroutine ??= StartCoroutine(ResetSimulation());
+        if (_resetCoroutine != null)
+        {
+            StopCoroutine(_resetCoroutine);
+        }
+        _resetCoroutine = StartCoroutine(ResetSimulation());
+    }
+
+    # endregion
+
+    /// <summary>
+    /// Kills all active balls, resets them to global parameters, and reactivates one.
+    /// </summary>
+    private IEnumerator ResetSimulation()
+    {   
+        while (AlivePool.Count > 0)
+        {
+            SetBallDead(AlivePool[0]);
+        }
+
+        foreach(GameObject ball in DeadPool)
+        {
+            ball.GetComponent<Ball>().SplitChance = GlobalSplitChance;
+        }
+        
+        OnResetSimulation?.Invoke(gameObject, gameObject);
+        yield return new WaitForSeconds(1);
+        GetBall();
+
+        _resetCoroutine = null;
+    }
+
+    /// <remarks>
+    /// No need to unsubscribe since ball objects aren't being destroyed
+    /// </remarks>
+    private GameObject MakeNewBall()
+    {
+        GameObject ball = Instantiate(_ballPrefab);
+        ball.GetComponent<Ball>().OnSplit += Split_OnSplit;
+        ball.GetComponent<Ball>().OnSplitFail += Split_OnSplitFail;
+        return ball;
+    }
+
+    private GameObject SetBallAlive(GameObject ball)
+    {
+        ball.transform.position = (Vector2)_ballPrefab.transform.position + new Vector2(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
+        ball.SetActive(true);
+        AlivePool.Add(ball);
+        DeadPool.Remove(ball);
+
+        return ball;
+    }
+
+    private GameObject SetBallDead(GameObject ball)
+    {
+        ball.SetActive(false);
+        DeadPool.Add(ball);
+        AlivePool.Remove(ball);
+
+        return ball;
     }
 
     /// <summary>
@@ -131,10 +148,9 @@ public class BallPool : MonoBehaviour
     /// </summary>
     public GameObject GetBall()
     {
-        if (DeadPool.TryPeek(out GameObject tempBall))
+        if (DeadPool.Count > 0)
         {
-            SetBallAlive(tempBall);
-            return tempBall;
+            return SetBallAlive(DeadPool[0]);
         }
 
         else if (AlivePool.Count < _ballAmountLimit)
