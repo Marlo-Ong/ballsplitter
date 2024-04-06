@@ -10,6 +10,7 @@ public class TextUpdater : MonoBehaviour
     [SerializeField] private TextMeshProUGUI totalSplitFailsText;
     [SerializeField] private TextMeshProUGUI highestSplitsText;
     [SerializeField] private TextMeshProUGUI highestSplitFailsText;
+    [SerializeField] private TextMeshProUGUI splitChanceText;
     public float totalSplits;
     public float totalSplitFails;
     public float highestSplits;
@@ -43,5 +44,14 @@ public class TextUpdater : MonoBehaviour
         highestSplitFails = Mathf.Max(highestSplitFails, totalSplitFails);
         totalSplitFailsText.text = "Fails: " + totalSplitFails.ToString();
         highestSplitFailsText.text = "Highest fails: " + highestSplitFails.ToString();
+    }
+
+    public void UpdateSplitChanceText(float chance)
+    {
+        splitChanceText.text = $"Split Chance: {chance:F2}";
+        highestSplits = 0;
+        highestSplitFails = 0;
+        highestSplitsText.text = "Highest splits: 0";
+        highestSplitFailsText.text = "Highest fails: 0";
     }
 }
