@@ -25,6 +25,8 @@ public class RandomsUtil : MonoBehaviour
     }
 
     /// <remarks>
+    /// Via David Blackman and Sebastiano Vigna (2019), "Scrambled Linear Pseudorandom Number Generators"
+    /// 
     /// While .NET 6 uses xoshiro256** and xoshiro128** for their random libraries,
     /// Unity (2022.x) still uses the older Xorshift128. Here xoshiro256+ is
     /// being used for its speed for generating 64-bit floating point numbers.

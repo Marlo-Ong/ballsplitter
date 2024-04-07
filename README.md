@@ -15,10 +15,14 @@ Based on Mike O'Brien's probability simulation at [https://mana.works/splits](ht
 - ~~Add accuracy stat to compare randomness to split chance~~
 - ~~Optimize for 1000 active balls~~
 - ~~Build to WebGL~~
+- Change split behavior:
+    - Random force angle applied on activate 
+    - Balls should split from bounce location, not middle
+    - Split balls should have similar velocity to its former
 
 ### Nice-to-Haves:
 - Add random tones on collision
-- Further simulation customizability
+- Further simulation customizability:
     - Ball bounciness
     - Varying probabilities
     - ~~Toggling ball-to-ball collision~~

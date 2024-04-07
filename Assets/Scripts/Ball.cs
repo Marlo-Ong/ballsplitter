@@ -11,15 +11,21 @@ public class Ball : MonoBehaviour
     {
         SetRandomColor();
     }
-    void OnCollisionEnter2D(Collision2D collision) // ignores balls on same layer
+
+    /// <remarks>
+    /// Exclusion layers are assigned dynamically by <see cref="BallPool"/>.
+    /// If other balls are excluded from collision, only bounces on
+    /// the border circle will trigger this event
+    /// </remarks>
+    void OnCollisionEnter2D(Collision2D collision)
     {
         if (GetRandomSplit()) 
         {
-            OnSplit?.Invoke(gameObject, gameObject);
+            OnSplit?.Invoke(null, gameObject);
         }
         else
         {
-            OnSplitFail?.Invoke(gameObject, gameObject);
+            OnSplitFail?.Invoke(null, gameObject);
         }
     }
 

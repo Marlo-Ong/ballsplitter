@@ -118,7 +118,7 @@ public class BallPool : MonoBehaviour
         ResetAllBallParams();
         PlayActiveBall();
 
-        OnResetSimulation?.Invoke(gameObject, gameObject);
+        OnResetSimulation?.Invoke(null, gameObject);
         _resetCoroutine = null;
     }
 
@@ -156,6 +156,8 @@ public class BallPool : MonoBehaviour
         ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
         ball.SetActive(true);
         ActivePool.Add(ball);
+
+        // if this ball is poppable, use a faster remove
         if (InactiveBallCount > 0 && ball == InactivePool[InactiveBallCount - 1])
         {
             InactivePool.RemoveAt(InactiveBallCount - 1);
@@ -172,6 +174,8 @@ public class BallPool : MonoBehaviour
     {
         ball.SetActive(false);
         InactivePool.Add(ball);
+
+        // if this ball is poppable, use a faster remove
         if (ActiveBallCount > 0 && ball == ActivePool[ActiveBallCount - 1])
         {
             ActivePool.RemoveAt(ActiveBallCount - 1);
