@@ -63,15 +63,20 @@ public class BallPool : MonoBehaviour
 
     # region Event Handlers
 
-    void Ball_OnSplit(object sender, GameObject ball)
+    void Ball_OnSplit(object sender, Collision2D e)
     {
-        PlayActiveBall();
+        GameObject split = PlayActiveBall();
+        if (split != null)
+        {
+            split.GetComponent<Rigidbody2D>().position = e.otherRigidbody.position;
+            split.GetComponent<Rigidbody2D>().velocity = e.otherRigidbody.velocity + new Vector2(Random.Range(-5f, 5f), Random.Range(-5f, 5f));
+        }
         OnGlobalSplit?.Invoke(null, gameObject);
     }
 
-    void Ball_OnSplitFail(object sender, GameObject ball)
+    void Ball_OnSplitFail(object sender, Collision2D e)
     {
-        SetBallInactive(ball);
+        SetBallInactive(e.otherRigidbody.gameObject);
         OnGlobalSplitFail?.Invoke(null, gameObject);
 
         if (ActivePool.Count <= 0)
@@ -116,7 +121,8 @@ public class BallPool : MonoBehaviour
         yield return new WaitForSeconds(1);
 
         ResetAllBallParams();
-        PlayActiveBall();
+        GameObject ball = PlayActiveBall();
+        ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(0f,1f), Random.Range(0f,1f));
 
         OnResetSimulation?.Invoke(null, gameObject);
         _resetCoroutine = null;
@@ -153,7 +159,6 @@ public class BallPool : MonoBehaviour
 
     private GameObject SetBallActive(GameObject ball)
     {
-        ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
         ball.SetActive(true);
         ActivePool.Add(ball);
 

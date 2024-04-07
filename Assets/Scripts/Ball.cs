@@ -5,8 +5,8 @@ using UnityEngine;
 public class Ball : MonoBehaviour
 {
     [Range(0f, 1f)] public float SplitChance;
-    public event System.EventHandler<GameObject> OnSplit;
-    public event System.EventHandler<GameObject> OnSplitFail;
+    public event System.EventHandler<Collision2D> OnSplit;
+    public event System.EventHandler<Collision2D> OnSplitFail;
     void Start()
     {
         SetRandomColor();
@@ -21,11 +21,11 @@ public class Ball : MonoBehaviour
     {
         if (GetRandomSplit()) 
         {
-            OnSplit?.Invoke(null, gameObject);
+            OnSplit?.Invoke(null, collision);
         }
         else
         {
-            OnSplitFail?.Invoke(null, gameObject);
+            OnSplitFail?.Invoke(null, collision);
         }
     }
 
