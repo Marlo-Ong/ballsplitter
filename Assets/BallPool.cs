@@ -93,6 +93,7 @@ public class BallPool : MonoBehaviour
     public void UnityEvent_OnValueChanged_BallCollisionToggle(bool collide)
     {
         IsBallToBallCollisionOn = collide;
+        _ballAmountLimit = (int)(_ballAmountLimit * (collide ? 0.5f : 2.0f));
         if (_resetCoroutine != null)
         {
             StopCoroutine(_resetCoroutine);
@@ -107,12 +108,12 @@ public class BallPool : MonoBehaviour
     /// </summary>
     private IEnumerator ResetSimulation()
     {   
-        yield return new WaitForSeconds(1);
-
         while (ActivePool.Count > 0)
         {
-            SetBallInactive(ActivePool[0]);
+            SetBallInactive(ActivePool[ActiveBallCount - 1]);
         }
+
+        yield return new WaitForSeconds(1);
 
         ResetAllBallParams();
         PlayActiveBall();
@@ -155,7 +156,14 @@ public class BallPool : MonoBehaviour
         ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
         ball.SetActive(true);
         ActivePool.Add(ball);
-        InactivePool.Remove(ball);
+        if (InactiveBallCount > 0 && ball == InactivePool[InactiveBallCount - 1])
+        {
+            InactivePool.RemoveAt(InactiveBallCount - 1);
+        }
+        else
+        {
+            InactivePool.Remove(ball);
+        }
 
         return ball;
     }
@@ -164,26 +172,35 @@ public class BallPool : MonoBehaviour
     {
         ball.SetActive(false);
         InactivePool.Add(ball);
-        ActivePool.Remove(ball);
+        if (ActiveBallCount > 0 && ball == ActivePool[ActiveBallCount - 1])
+        {
+            ActivePool.RemoveAt(ActiveBallCount - 1);
+        }
+        else
+        {
+            ActivePool.Remove(ball);
+        }
 
         return ball;
     }
 
     /// <summary>
-    ///  Activates an available inactive ball or creates new one. Returns null if making new ball would overtake ball limit.
+    ///  Activates an available inactive ball or creates new one. Returns null if ball limit has been reached.
     /// </summary>
     public GameObject PlayActiveBall()
     {
-        if (InactiveBallCount > 0)
+        if (ActiveBallCount < _ballAmountLimit)
         {
-            return SetBallActive(InactivePool[0]);
-        }
-
-        else if (ActiveBallCount < _ballAmountLimit)
-        {
-            GameObject newBall = MakeNewBall();
-            SetBallActive(newBall);
-            return newBall;
+            if (InactiveBallCount > 0)
+            {
+                return SetBallActive(InactivePool[InactiveBallCount - 1]);
+            }
+            else 
+            {
+                GameObject newBall = MakeNewBall();
+                SetBallActive(newBall);
+                return newBall;
+            }
         }
 
         return null;

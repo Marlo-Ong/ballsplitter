@@ -13,7 +13,7 @@ Based on Mike O'Brien's probability simulation at [https://mana.works/splits](ht
 - ~~Fix Canvas UI Scaling~~
 - ~~Bugfix: Some balls remain active on ResetSimulation~~
 - ~~Add accuracy stat to compare randomness to split chance~~
-- Optimize for >1000 active balls
+- ~~Optimize for 1000 active balls~~
 - ~~Build to WebGL~~
 
 ### Nice-to-Haves:
