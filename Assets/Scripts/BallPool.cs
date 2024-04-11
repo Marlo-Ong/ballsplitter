@@ -21,8 +21,8 @@ public class BallPool : MonoBehaviour
     [field: Range(0.0f, 1.0f)][field: SerializeField] private float _startingSplitChance;
     public float GlobalSplitChance;
     public bool IsBallToBallCollisionOn;
-    private List<GameObject> ActivePool;
-    private List<GameObject> InactivePool;
+    private HashSet<GameObject> ActivePool;
+    private HashSet<GameObject> InactivePool;
     public int ActiveBallCount
     {
         get => ActivePool.Count;
@@ -110,7 +110,7 @@ public class BallPool : MonoBehaviour
     {   
         while (ActivePool.Count > 0)
         {
-            SetBallInactive(ActivePool[ActiveBallCount - 1]);
+            SetBallInactive(ActivePool.ElementAt(0));
         }
 
         yield return new WaitForSeconds(1);
@@ -137,7 +137,7 @@ public class BallPool : MonoBehaviour
                 ball.GetComponent<Collider2D>().excludeLayers = LayerMask.GetMask("Balls");
             }
         }
-        InactivePool.RemoveAt(InactivePool.Count - 1);
+        InactivePool.Remove(_ballPrefab);
     }
 
     /// <remarks>
@@ -156,16 +156,7 @@ public class BallPool : MonoBehaviour
         ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(-2f, 2f), Random.Range(-1f, 1f));
         ball.SetActive(true);
         ActivePool.Add(ball);
-
-        // if this ball is poppable, use a faster remove
-        if (InactiveBallCount > 0 && ball == InactivePool[InactiveBallCount - 1])
-        {
-            InactivePool.RemoveAt(InactiveBallCount - 1);
-        }
-        else
-        {
-            InactivePool.Remove(ball);
-        }
+        InactivePool.Remove(ball);
 
         return ball;
     }
@@ -174,16 +165,7 @@ public class BallPool : MonoBehaviour
     {
         ball.SetActive(false);
         InactivePool.Add(ball);
-
-        // if this ball is poppable, use a faster remove
-        if (ActiveBallCount > 0 && ball == ActivePool[ActiveBallCount - 1])
-        {
-            ActivePool.RemoveAt(ActiveBallCount - 1);
-        }
-        else
-        {
-            ActivePool.Remove(ball);
-        }
+        ActivePool.Remove(ball);
 
         return ball;
     }
@@ -197,7 +179,7 @@ public class BallPool : MonoBehaviour
         {
             if (InactiveBallCount > 0)
             {
-                return SetBallActive(InactivePool[InactiveBallCount - 1]);
+                return SetBallActive(InactivePool.ElementAt(0));
             }
             else 
             {
