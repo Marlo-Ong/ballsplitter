@@ -15,10 +15,12 @@ Based on Mike O'Brien's probability simulation at [https://mana.works/splits](ht
 - ~~Add accuracy stat to compare randomness to split chance~~
 - ~~Optimize for 1000 active balls~~
 - ~~Build to WebGL~~
-- Change split behavior:
-    - Random force angle applied on activate 
-    - Balls should split from bounce location, not middle
-    - Split balls should have similar velocity to its former
+- ~~Change split behavior:~~
+    - ~~Random force angle applied on activate ~~
+    - ~~Balls should split from bounce location, not middle~~
+    - ~~Split balls should have similar velocity to its former~~
+- Bugfix: Visual glitch on ball activate before position is updated
+    - Refactor all position transforms to either Rigidbody.position (FixedUpdate) or Transform.position (Update)
 
 ### Nice-to-Haves:
 - Add random tones on collision

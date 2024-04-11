@@ -3,18 +3,23 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using System.Linq;
 
 public class TextUpdater : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI statsText;
     [SerializeField] private TextMeshProUGUI splitChanceText;
     private int totalSplits;
+    private int totalRuns;
     private int totalSplitFails;
     private int highestSplits;
-    private int highestSplitFails;
     private float accuracy;
+    private List<int> runSplits;
+    private double meanSplits;
     void Start()
     {
+        runSplits = new();
+        meanSplits = 0;
         BallPool.OnResetSimulation += BallPool_OnResetSimulation;
         BallPool.OnGlobalSplit += BallPool_OnGlobalSplit;
         BallPool.OnGlobalSplitFail += BallPool_OnGlobalSplitFail;
@@ -23,13 +28,18 @@ public class TextUpdater : MonoBehaviour
     void UpdateStatsText()
     {
         accuracy = (totalSplitFails + totalSplits) == 0 ? 1.0f : (totalSplits / (float)(totalSplitFails + totalSplits));
-        statsText.text = $"Splits: {totalSplits} \nFails: {totalSplitFails} \n\nAccuracy: {accuracy:P} \n\nHighest splits: {highestSplits} \nHighest fails: {highestSplitFails} \n\nActive balls: {BallPool.Instance.ActiveBallCount} \nInactive balls: {BallPool.Instance.InactiveBallCount}";
+        statsText.text = $"Splits: {totalSplits} \nFails: {totalSplitFails} \nAccuracy: {accuracy:P} \n\nHighest splits: {highestSplits} \nAverage # splits: {meanSplits:P} \nTotal runs: {totalRuns} \n\nActive balls: {BallPool.Instance.ActiveBallCount} \nInactive balls: {BallPool.Instance.InactiveBallCount}";
     }
 
     void BallPool_OnResetSimulation(object s, GameObject sender)
     {
+        runSplits.Add(totalSplits);
+        meanSplits = runSplits.Average();
+
         totalSplits = 0;
         totalSplitFails = 0;
+        totalRuns++;
+
         UpdateStatsText();
     }
 
@@ -43,7 +53,6 @@ public class TextUpdater : MonoBehaviour
     void BallPool_OnGlobalSplitFail(object s, GameObject sender)
     {
         totalSplitFails++;
-        highestSplitFails = Mathf.Max(highestSplitFails, totalSplitFails);
         UpdateStatsText();
     }
 
@@ -62,7 +71,9 @@ public class TextUpdater : MonoBehaviour
     private void ResetHighestStats()
     {
         highestSplits = 0;
-        highestSplitFails = 0;
+        totalRuns = 0;
+        runSplits.Clear();
+        meanSplits = 0;
         UpdateStatsText();
     }
 }

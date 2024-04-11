@@ -65,11 +65,12 @@ public class BallPool : MonoBehaviour
 
     void Ball_OnSplit(object sender, Collision2D e)
     {
-        GameObject split = PlayActiveBall();
+        GameObject split = GetInactiveBall();
         if (split != null)
         {
+            SetBallActive(split);
             split.GetComponent<Rigidbody2D>().position = e.otherRigidbody.position;
-            split.GetComponent<Rigidbody2D>().velocity = e.otherRigidbody.velocity + new Vector2(Random.Range(-5f, 5f), Random.Range(-5f, 5f));
+            split.GetComponent<Rigidbody2D>().velocity = e.otherRigidbody.velocity + new Vector2(Random.Range(-5f, 5f), Random.Range(-5f, 5f)).normalized;
         }
         OnGlobalSplit?.Invoke(null, gameObject);
     }
@@ -121,8 +122,10 @@ public class BallPool : MonoBehaviour
         yield return new WaitForSeconds(1);
 
         ResetAllBallParams();
-        GameObject ball = PlayActiveBall();
-        ball.transform.position = _ballPrefab.transform.position + new Vector3(Random.Range(0f,1f), Random.Range(0f,1f));
+        GameObject ball = GetInactiveBall();
+        ball.transform.position = _ballPrefab.transform.position;
+        SetBallActive(ball);
+        ball.GetComponent<Rigidbody2D>().velocity = new Vector2(Random.Range(-5f, 5f), Random.Range(-5f, 5f));
 
         OnResetSimulation?.Invoke(null, gameObject);
         _resetCoroutine = null;
@@ -157,40 +160,34 @@ public class BallPool : MonoBehaviour
         return ball;
     }
 
-    private GameObject SetBallActive(GameObject ball)
+    private void SetBallActive(GameObject ball)
     {
         ball.SetActive(true);
         ActivePool.Add(ball);
         InactivePool.Remove(ball);
-
-        return ball;
     }
 
-    private GameObject SetBallInactive(GameObject ball)
+    private void SetBallInactive(GameObject ball)
     {
         ball.SetActive(false);
         InactivePool.Add(ball);
         ActivePool.Remove(ball);
-
-        return ball;
     }
 
     /// <summary>
     ///  Activates an available inactive ball or creates new one. Returns null if ball limit has been reached.
     /// </summary>
-    public GameObject PlayActiveBall()
+    public GameObject GetInactiveBall()
     {
         if (ActiveBallCount < _ballAmountLimit)
         {
             if (InactiveBallCount > 0)
             {
-                return SetBallActive(InactivePool.ElementAt(0));
+                return InactivePool.ElementAt(0);
             }
             else 
             {
-                GameObject newBall = MakeNewBall();
-                SetBallActive(newBall);
-                return newBall;
+                return MakeNewBall();
             }
         }
 
